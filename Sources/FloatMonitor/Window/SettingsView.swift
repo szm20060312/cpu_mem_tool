@@ -47,7 +47,7 @@ struct SettingsView: View {
 
                 // 开机启动
                 settingSection("开机启动", icon: "power.circle") {
-                    Toggle("登录时自动启动 cpu_mem_tool", isOn: $settings.launchAtLogin)
+                    Toggle("登录时自动启动 FloatMonitor", isOn: $settings.launchAtLogin)
                         .font(.caption)
                 }
 

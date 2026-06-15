@@ -77,5 +77,5 @@ SIZE=$(du -sh "$DMG_FILE" | cut -f1)
 echo "  DMG 大小: $SIZE"
 echo ""
 echo "  上传到 GitHub Release:"
-echo "  https://github.com/szm20060312/cpu_mem_tool/releases/new"
+echo "  https://github.com/szm20060312/FloatMonitor/releases/new"
 echo ""

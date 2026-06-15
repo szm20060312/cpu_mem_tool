@@ -30,8 +30,8 @@
    - Language: Swift
 2. 创建目录结构：
    ```
-   cpu_mem_tool/
-   ├── App/cpu_mem_toolApp.swift
+   FloatMonitor/
+   ├── App/FloatMonitorApp.swift
    ├── MenuBar/MenuBarView.swift
    ├── Window/ContentView.swift
    ├── Services/SystemMonitorService.swift

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// cpu_mem_tool — Mac 菜单栏系统监控应用
+/// FloatMonitor — Mac 菜单栏系统监控应用
 /// macOS 26 "液态玻璃"设计风格
 @main
 struct FloatMonitorApp: App {

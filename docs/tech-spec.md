@@ -27,7 +27,7 @@
 ```
 ┌─────────────────────────────────────┐
 │               App 入口               │
-│         cpu_mem_toolApp.swift        │
+│         FloatMonitorApp.swift        │
 │     (WindowGroup + MenuBarExtra)     │
 └──────────┬──────────────┬────────────┘
            │              │
