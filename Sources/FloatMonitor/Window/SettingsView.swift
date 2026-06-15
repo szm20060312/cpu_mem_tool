@@ -11,7 +11,6 @@ struct SettingsView: View {
             menuBarTab.tabItem { Label("菜单栏", systemImage: "menubar.rectangle") }
         }
         .frame(width: 420, height: 340)
-        .background(.regularMaterial)
     }
 
     // MARK: 通用

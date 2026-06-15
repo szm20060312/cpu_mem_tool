@@ -1,6 +1,6 @@
 # FloatMonitor
 
-Mac 菜单栏系统监控工具，实时显示 CPU / 内存占用，点击弹出详细面板查看 GPU、网络等完整数据。macOS 26 "液态玻璃"设计风格。
+Mac 菜单栏系统监控工具，实时显示 CPU / 内存占用，点击弹出详细面板查看 GPU、网络等完整数据。macOS 原生设计风格。
 
 ## ✨ 功能
 
@@ -16,7 +16,6 @@ Mac 菜单栏系统监控工具，实时显示 CPU / 内存占用，点击弹出
 - **网络** — 下载/上传实时速率，支持 MB/s 和 Mbps 两种单位
 - **GPU** — Apple Silicon GPU 实时使用率
 - **底部控制栏** — 刷新间隔一键切换（0.5s / 1s / 2s / 5s）+ 退出按钮
-- **液态玻璃效果** — `.ultraThinMaterial` 背景 + 圆角 + 阴影
 
 ### 桌面窗口模式
 - **概览** — 指标卡片网格（CPU / 内存 / GPU / 网络），含进度条和辅助信息
@@ -97,10 +96,12 @@ FloatMonitor/
 │   ├── Services/
 │   │   ├── SystemMonitorService.swift     # 核心监控服务（Timer + @Published）
 │   │   └── GPUMonitor.swift               # GPU 使用率（IOKit IOAccelerator）
-│   └── Models/
-│       ├── SystemStats.swift              # 系统数据模型
-│       ├── AppSettings.swift              # 应用设置（UserDefaults + SMAppService）
-│       └── NetworkHistory.swift           # 网络历史数据管理
+│   ├── Models/
+│   │   ├── SystemStats.swift              # 系统数据模型
+│   │   ├── AppSettings.swift              # 应用设置（UserDefaults + SMAppService）
+│   │   └── NetworkHistory.swift           # 网络历史数据管理
+│   └── Utils/
+│       └── ViewHelpers.swift              # 共享 UI 组件和格式化函数
 ├── Resources/
 │   ├── Info.plist                         # App 包配置（LSUIElement=true）
 │   └── AppIcon.icns                       # 应用图标
@@ -123,7 +124,7 @@ FloatMonitor/
 
 ## 📝 开发状态
 
-v1.0.0 — 全部 10 个实施步骤已完成 ✅
+v1.1.0 — 全部 10 个实施步骤已完成 ✅
 
 | 步骤 | 内容 | 状态 |
 |------|------|:--:|
@@ -132,7 +133,7 @@ v1.0.0 — 全部 10 个实施步骤已完成 ✅
 | 3 | 菜单栏基础显示 | ✅ |
 | 4 | 弹出面板 (Popover) | ✅ |
 | 5 | 桌面窗口模式 | ✅ |
-| 6 | 液态玻璃 UI 美化 | ✅ |
+| 6 | UI 美化（v1.1.0 迁移至原生外观） | ✅ |
 | 7 | 应用图标与品牌 | ✅ |
 | 8 | 偏好设置 | ✅ |
 | 9 | 历史图表 | ✅ |

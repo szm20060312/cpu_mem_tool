@@ -20,6 +20,7 @@ struct DailyNetworkStats: Codable {
 
     static func todayKey() -> String {
         let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd"
         return f.string(from: Date())
     }
@@ -41,8 +42,8 @@ struct DailyNetworkStats: Codable {
 
 // MARK: - 网络历史管理器
 
-final class NetworkHistoryManager: ObservableObject, @unchecked Sendable {
-    static let shared = NetworkHistoryManager()
+final class NetworkHistoryManager: ObservableObject {
+    @MainActor static let shared = NetworkHistoryManager()
 
     /// 最近 N 个采样点（用于折线图）
     @Published var recentPoints: [NetworkDataPoint] = []
@@ -54,25 +55,42 @@ final class NetworkHistoryManager: ObservableObject, @unchecked Sendable {
     private var accumulatedUpload: UInt64 = 0
     private var lastSaveTime = Date()
 
-    nonisolated func record(download: UInt64, upload: UInt64, interval: TimeInterval) {
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            let now = Date()
-            let point = NetworkDataPoint(timestamp: now, download: download, upload: upload)
+    @MainActor
+    func record(download: UInt64, upload: UInt64, interval: TimeInterval) {
+        let now = Date()
+        let point = NetworkDataPoint(timestamp: now, download: download, upload: upload)
 
-            recentPoints.append(point)
-            if recentPoints.count > maxPoints {
-                recentPoints.removeFirst(recentPoints.count - maxPoints)
-            }
+        recentPoints.append(point)
+        if recentPoints.count > maxPoints {
+            recentPoints.removeFirst(recentPoints.count - maxPoints)
+        }
 
-            // 累计流量（字节/秒 × 间隔秒 = 字节）
-            accumulatedDownload += UInt64(Double(download) * interval)
-            accumulatedUpload   += UInt64(Double(upload)   * interval)
+        // 累计流量（字节/秒 × 间隔秒 = 字节）
+        accumulatedDownload += UInt64(Double(download) * interval)
+        accumulatedUpload   += UInt64(Double(upload)   * interval)
 
-            // 每 10 秒持久化一次
-            if now.timeIntervalSince(lastSaveTime) >= 10 {
-                saveDailyStats()
-                lastSaveTime = now
+        // 每 10 秒持久化一次
+        if now.timeIntervalSince(lastSaveTime) >= 10 {
+            cleanOldDailyStats()
+            saveDailyStats()
+            lastSaveTime = now
+        }
+    }
+
+    /// 清理 30 天前的旧每日统计，防止 UserDefaults 键无限累积
+    private func cleanOldDailyStats() {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        guard let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date()) else { return }
+        let cutoffKey = f.string(from: cutoff)
+
+        for key in UserDefaults.standard.dictionaryRepresentation().keys {
+            if key.hasPrefix("net_daily_") {
+                let dateString = String(key.dropFirst("net_daily_".count))
+                if dateString.count == 10 && dateString < cutoffKey {
+                    UserDefaults.standard.removeObject(forKey: key)
+                }
             }
         }
     }

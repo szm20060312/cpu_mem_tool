@@ -3,8 +3,9 @@ import Darwin
 
 /// 系统监控服务（全局单例）
 /// 按可配置的间隔采集 CPU/内存/温度/网络/GPU 真实数据
-final class SystemMonitorService: ObservableObject, @unchecked Sendable {
-    @MainActor static let shared = SystemMonitorService()
+@MainActor
+final class SystemMonitorService: ObservableObject {
+    static let shared = SystemMonitorService()
 
     /// 可用的刷新间隔选项
     static let availableIntervals: [TimeInterval] = [0.5, 1.0, 2.0, 5.0]
@@ -33,27 +34,19 @@ final class SystemMonitorService: ObservableObject, @unchecked Sendable {
         settingsObserver = NotificationCenter.default.addObserver(
             forName: UserDefaults.didChangeNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            let newVal = AppSettings.shared.refreshInterval
-            if self?.refreshInterval != newVal {
-                self?.refreshInterval = newVal
+            Task { @MainActor [weak self] in
+                let newVal = AppSettings.shared.refreshInterval
+                if self?.refreshInterval != newVal {
+                    self?.refreshInterval = newVal
+                }
             }
         }
     }
 
-    deinit {
-        timer?.invalidate()
-    }
 
     func startMonitoring() {
         refreshStats()
         scheduleTimer()
-    }
-
-    nonisolated func stopMonitoring() {
-        Task { @MainActor [weak self] in
-            self?.timer?.invalidate()
-            self?.timer = nil
-        }
     }
 
     /// 重启定时器（间隔变更时调用）
@@ -213,12 +206,14 @@ final class SystemMonitorService: ObservableObject, @unchecked Sendable {
         // macOS Activity Monitor 口径:
         // Used = App Memory + Wired + Compressed
         // App Memory ≈ internal - speculative + purgeable
-        let appMemory    = UInt64(vmStat.internal_page_count) &- UInt64(vmStat.speculative_count)
+        let internalCount = UInt64(vmStat.internal_page_count)
+        let speculativeCount = UInt64(vmStat.speculative_count)
+        let appMemory: UInt64 = internalCount > speculativeCount ? internalCount - speculativeCount : 0
         let wired        = UInt64(vmStat.wire_count)
         let compressed   = UInt64(vmStat.compressor_page_count)
         let purgeable    = UInt64(vmStat.purgeable_count)
 
-        return (appMemory &+ wired &+ compressed &+ purgeable) * pageSize
+        return (appMemory + wired + compressed + purgeable) * pageSize
     }
 
     private func memoryPressure() -> MemoryPressure {
@@ -249,7 +244,7 @@ final class SystemMonitorService: ObservableObject, @unchecked Sendable {
         defer { previousNetworkBytes = current }
 
         guard let prev = previousNetworkBytes else {
-            return (0, 0)
+            return (0, 0) // 首次采集无差值，返回 0（1 个间隔后自动正常）
         }
 
         let download = max(0, Int64(current.received) - Int64(prev.received))
@@ -293,17 +288,5 @@ final class SystemMonitorService: ObservableObject, @unchecked Sendable {
         }
 
         return (totalReceived, totalSent)
-    }
-
-    // MARK: - 工具
-
-    private func formatRate(_ bytesPerSec: UInt64) -> String {
-        if bytesPerSec >= 1_000_000 {
-            return String(format: "%.1f MB/s", Double(bytesPerSec) / 1_000_000)
-        } else if bytesPerSec >= 1_000 {
-            return String(format: "%.1f KB/s", Double(bytesPerSec) / 1_000)
-        } else {
-            return "\(bytesPerSec) B/s"
-        }
     }
 }

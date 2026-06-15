@@ -26,22 +26,22 @@ enum NetworkUnit: String, CaseIterable {
 
 // MARK: - 应用设置
 
-final class AppSettings: ObservableObject, @unchecked Sendable {
-    nonisolated static let shared = AppSettings()
+final class AppSettings: ObservableObject {
+    @MainActor static let shared = AppSettings()
 
     // 刷新间隔
     @Published var refreshInterval: TimeInterval {
-        didSet { UserDefaults.standard.set(refreshInterval, forKey: "refresh_interval") }
+        didSet { UserDefaults.standard.set(refreshInterval, forKey: "com.floatmonitor.refresh_interval") }
     }
 
     // 菜单栏显示模式
     @Published var menuBarMode: MenuBarMode {
-        didSet { UserDefaults.standard.set(menuBarMode.rawValue, forKey: "menu_bar_mode") }
+        didSet { UserDefaults.standard.set(menuBarMode.rawValue, forKey: "com.floatmonitor.menu_bar_mode") }
     }
 
     // 网络速率单位
     @Published var networkUnit: NetworkUnit {
-        didSet { UserDefaults.standard.set(networkUnit.rawValue, forKey: "network_unit") }
+        didSet { UserDefaults.standard.set(networkUnit.rawValue, forKey: "com.floatmonitor.network_unit") }
     }
 
     // 开机启动
@@ -62,17 +62,17 @@ final class AppSettings: ObservableObject, @unchecked Sendable {
 
     // 窗口默认置顶
     @Published var floatOnTopByDefault: Bool {
-        didSet { UserDefaults.standard.set(floatOnTopByDefault, forKey: "float_on_top") }
+        didSet { UserDefaults.standard.set(floatOnTopByDefault, forKey: "com.floatmonitor.float_on_top") }
     }
 
     private init() {
         let ud = UserDefaults.standard
 
-        self.refreshInterval = ud.double(forKey: "refresh_interval").nonZero ?? 1.0
-        self.menuBarMode = MenuBarMode(rawValue: ud.string(forKey: "menu_bar_mode") ?? "") ?? .compact
-        self.networkUnit = NetworkUnit(rawValue: ud.string(forKey: "network_unit") ?? "") ?? .bytesPerSec
+        self.refreshInterval = ud.double(forKey: "com.floatmonitor.refresh_interval").nonZero ?? 1.0
+        self.menuBarMode = MenuBarMode(rawValue: ud.string(forKey: "com.floatmonitor.menu_bar_mode") ?? "") ?? .compact
+        self.networkUnit = NetworkUnit(rawValue: ud.string(forKey: "com.floatmonitor.network_unit") ?? "") ?? .bytesPerSec
         self.launchAtLogin = SMAppService.mainApp.status == .enabled
-        self.floatOnTopByDefault = ud.bool(forKey: "float_on_top")
+        self.floatOnTopByDefault = ud.bool(forKey: "com.floatmonitor.float_on_top")
     }
 }
 

@@ -6,6 +6,7 @@ import Combine
 
 /// 自定义 NSView，在菜单栏中以双行紧凑布局显示 CPU/内存数据
 /// 宽度仅 ~36pt，避免因文字过长被系统隐藏
+@MainActor
 final class StatusBarTextView: NSView {
     var cpuText: String = "--" {
         didSet { needsDisplay = true }
@@ -108,7 +109,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func observeStats() {
         SystemMonitorService.shared.$stats
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] stats in
                 self?.updateStatusBar(
                     cpu: stats.cpuUsage,
@@ -143,7 +143,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func observeSettings() {
         AppSettings.shared.$menuBarMode
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] mode in
                 self?.applyMenuBarMode(mode)
             }

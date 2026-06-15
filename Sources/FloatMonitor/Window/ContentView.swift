@@ -27,7 +27,6 @@ struct ContentView: View {
             tabContent
         }
         .frame(minWidth: 440, idealWidth: 500, minHeight: 420, idealHeight: 560)
-        .background(.regularMaterial)
         .onChange(of: floatOnTop) { _, new in
             for w in NSApp.windows {
                 if !w.isKind(of: NSClassFromString("NSStatusBarWindow") ?? NSWindow.self) {
@@ -84,51 +83,6 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Shared Helpers
-
-private func gaugeBar(_ value: Double, color: Color) -> some View {
-    GeometryReader { g in
-        ZStack(alignment: .leading) {
-            Capsule().fill(.quaternary).frame(height: 5)
-            Capsule()
-                .fill(value > 80 ? .red : value > 60 ? .orange : color)
-                .frame(width: max(5, g.size.width * min(value, 100) / 100), height: 5)
-                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: value)
-        }
-    }
-    .frame(height: 5)
-}
-
-private func cardBg<C: View>(@ViewBuilder _ content: () -> C) -> some View {
-    content()
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 12).fill(.quaternary.opacity(0.4)))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.05), lineWidth: 0.5))
-}
-
-private func coreColor(_ u: Double) -> Color {
-    u > 80 ? .red : u > 60 ? .orange : .blue
-}
-
-private func fmtBytes(_ b: UInt64) -> String {
-    String(format: "%.1f GB", Double(b) / 1_073_741_824)
-}
-
-private func fmtRate(_ b: UInt64) -> String {
-    let unit = AppSettings.shared.networkUnit
-    if unit == .bitsPerSec {
-        let bps = Double(b) * 8
-        if bps >= 1_000_000_000 { return String(format: "%.1f Gbps", bps / 1_000_000_000) }
-        if bps >= 1_000_000 { return String(format: "%.1f Mbps", bps / 1_000_000) }
-        if bps >= 1_000 { return String(format: "%.0f Kbps", bps / 1_000) }
-        return "\(Int(bps)) bps"
-    }
-    if b >= 1_000_000 { return String(format: "%.1f MB/s", Double(b) / 1_000_000) }
-    if b >= 1_000 { return String(format: "%.0f KB/s", Double(b) / 1_000) }
-    return "\(b) B/s"
-}
-
 // MARK: - 概览 Tab
 
 private struct OverviewTab: View {
@@ -154,9 +108,9 @@ private struct OverviewTab: View {
                         Circle().fill(memColor).frame(width: 5, height: 5)
                         Text(s.stats.memoryPressure.label).font(.caption2).foregroundStyle(memColor)
                         Spacer()
-                        Text(fmtBytes(s.stats.memoryUsed)).font(.caption2).foregroundStyle(.secondary)
+                        Text(formatMemoryBytes(s.stats.memoryUsed)).font(.caption2).foregroundStyle(.secondary)
                         Text(" / ").font(.caption2).foregroundStyle(.quaternary)
-                        Text(fmtBytes(s.stats.memoryTotal)).font(.caption2).foregroundStyle(.secondary)
+                        Text(formatMemoryBytes(s.stats.memoryTotal)).font(.caption2).foregroundStyle(.secondary)
                     }
                 }
                 if let g = s.stats.gpuUsage {
@@ -168,7 +122,7 @@ private struct OverviewTab: View {
                     HStack {
                         VStack(alignment: .leading) {
                             Text("↓ 下载").font(.caption2).foregroundStyle(.secondary)
-                            Text(fmtRate(s.stats.networkDownload))
+                            Text(formatNetworkRate(s.stats.networkDownload))
                                 .font(.body.weight(.semibold).monospaced()).foregroundStyle(.blue)
                         }
                         Spacer()
@@ -176,7 +130,7 @@ private struct OverviewTab: View {
                         Spacer()
                         VStack(alignment: .trailing) {
                             Text("↑ 上传").font(.caption2).foregroundStyle(.secondary)
-                            Text(fmtRate(s.stats.networkUpload))
+                            Text(formatNetworkRate(s.stats.networkUpload))
                                 .font(.body.weight(.semibold).monospaced()).foregroundStyle(.purple)
                         }
                     }
@@ -229,8 +183,6 @@ private struct OverviewTab: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 12).fill(.quaternary.opacity(0.4)))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.05), lineWidth: 0.5))
     }
 }
 
@@ -242,24 +194,20 @@ private struct CPUTab: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                cardBg {
-                    VStack(spacing: 10) {
-                        HStack { Image(systemName: "cpu").foregroundStyle(.blue); Text("总使用率").font(.caption) }
-                        Text(String(format: "%.1f%%", s.stats.cpuUsage))
-                            .font(.system(size: 48, weight: .thin, design: .rounded))
-                            .contentTransition(.numericText(value: s.stats.cpuUsage))
-                        gaugeBar(s.stats.cpuUsage, color: .blue)
-                    }
+                VStack(spacing: 10) {
+                    HStack { Image(systemName: "cpu").foregroundStyle(.blue); Text("总使用率").font(.caption) }
+                    Text(String(format: "%.1f%%", s.stats.cpuUsage))
+                        .font(.system(size: 48, weight: .thin, design: .rounded))
+                        .contentTransition(.numericText(value: s.stats.cpuUsage))
+                    gaugeBar(s.stats.cpuUsage, color: .blue)
                 }
-                cardBg {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack { Image(systemName: "cpu").foregroundStyle(.blue); Text("每核心负载").font(.caption) }
-                        ForEach(Array(s.stats.cpuPerCore.enumerated()), id: \.offset) { i, u in
-                            HStack(spacing: 8) {
-                                Text(String(format: "%2d", i)).font(.caption2.monospaced()).foregroundStyle(.secondary).frame(width: 16)
-                                gaugeBar(u, color: coreColor(u))
-                                Text(String(format: "%3.0f%%", u)).font(.caption2.monospacedDigit()).foregroundStyle(coreColor(u)).frame(width: 30, alignment: .trailing)
-                            }
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack { Image(systemName: "cpu").foregroundStyle(.blue); Text("每核心负载").font(.caption) }
+                    ForEach(Array(s.stats.cpuPerCore.enumerated()), id: \.offset) { i, u in
+                        HStack(spacing: 8) {
+                            Text(String(format: "%2d", i)).font(.caption2.monospaced()).foregroundStyle(.secondary).frame(width: 16)
+                            gaugeBar(u, color: coreColor(u))
+                            Text(String(format: "%3.0f%%", u)).font(.caption2.monospacedDigit()).foregroundStyle(coreColor(u)).frame(width: 30, alignment: .trailing)
                         }
                     }
                 }
@@ -284,39 +232,35 @@ private struct MemoryTab: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                cardBg {
-                    VStack(spacing: 10) {
-                        HStack { Image(systemName: "memorychip").foregroundStyle(memColor); Text("内存使用").font(.caption) }
-                        Text(String(format: "%.1f%%", memPct))
-                            .font(.system(size: 48, weight: .thin, design: .rounded))
-                            .contentTransition(.numericText(value: memPct))
-                        gaugeBar(memPct, color: memColor)
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text("已使用").font(.caption2).foregroundStyle(.secondary)
-                                Text(fmtBytes(s.stats.memoryUsed)).font(.body.weight(.semibold))
-                            }
-                            Spacer()
-                            VStack(alignment: .trailing) {
-                                Text("总容量").font(.caption2).foregroundStyle(.secondary)
-                                Text(fmtBytes(s.stats.memoryTotal)).font(.body.weight(.semibold))
-                            }
+                VStack(spacing: 10) {
+                    HStack { Image(systemName: "memorychip").foregroundStyle(memColor); Text("内存使用").font(.caption) }
+                    Text(String(format: "%.1f%%", memPct))
+                        .font(.system(size: 48, weight: .thin, design: .rounded))
+                        .contentTransition(.numericText(value: memPct))
+                    gaugeBar(memPct, color: memColor)
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("已使用").font(.caption2).foregroundStyle(.secondary)
+                            Text(formatMemoryBytes(s.stats.memoryUsed)).font(.body.weight(.semibold))
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing) {
+                            Text("总容量").font(.caption2).foregroundStyle(.secondary)
+                            Text(formatMemoryBytes(s.stats.memoryTotal)).font(.body.weight(.semibold))
                         }
                     }
                 }
-                cardBg {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack { Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(.orange); Text("内存压力").font(.caption) }
-                        HStack(spacing: 20) {
-                            ForEach(MemoryPressure.allCases, id: \.self) { lv in
-                                VStack(spacing: 4) {
-                                    Circle()
-                                        .fill(s.stats.memoryPressure == lv ? pressureColor(lv) : .clear)
-                                        .frame(width: 14, height: 14)
-                                        .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
-                                    Text(lv.label).font(.caption2)
-                                        .foregroundStyle(s.stats.memoryPressure == lv ? .primary : .secondary)
-                                }
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack { Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(.orange); Text("内存压力").font(.caption) }
+                    HStack(spacing: 20) {
+                        ForEach(MemoryPressure.allCases, id: \.self) { lv in
+                            VStack(spacing: 4) {
+                                Circle()
+                                    .fill(s.stats.memoryPressure == lv ? pressureColor(lv) : .clear)
+                                    .frame(width: 14, height: 14)
+                                    .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 1))
+                                Text(lv.label).font(.caption2)
+                                    .foregroundStyle(s.stats.memoryPressure == lv ? .primary : .secondary)
                             }
                         }
                     }
@@ -355,15 +299,13 @@ private struct NetworkTab: View {
     private func rateCard(_ label: String, rate: UInt64, color: Color) -> some View {
         VStack(spacing: 4) {
             Text(label).font(.caption2).foregroundStyle(.secondary)
-            Text(fmtRate(rate))
+            Text(formatNetworkRate(rate))
                 .font(.title2.weight(.semibold).monospaced())
                 .foregroundStyle(color)
                 .contentTransition(.numericText(value: Double(rate)))
         }
         .padding(14)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 12).fill(.quaternary.opacity(0.4)))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.05), lineWidth: 0.5))
     }
 
     private func chartCard(_ title: String, color: Color, points: [NetworkDataPoint], kp: KeyPath<NetworkDataPoint, UInt64>) -> some View {

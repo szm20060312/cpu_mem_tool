@@ -29,13 +29,6 @@ struct MenuBarView: View {
             footerView
         }
         .frame(width: 260)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(.white.opacity(0.08), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.12), radius: 16, y: 6)
     }
 
     // MARK: - 标题栏
@@ -90,7 +83,7 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 5) {
             sectionHeader("CPU", icon: "cpu", color: .blue,
                           value: monitorService.stats.cpuUsage)
-            gaugeBar(value: monitorService.stats.cpuUsage, color: .blue)
+            gaugeBar(monitorService.stats.cpuUsage, color: .blue, height: 4)
             if !monitorService.stats.cpuPerCore.isEmpty {
                 perCoreBars(cores: monitorService.stats.cpuPerCore)
             }
@@ -101,7 +94,7 @@ struct MenuBarView: View {
         HStack(spacing: 2) {
             ForEach(Array(cores.enumerated()), id: \.offset) { _, u in
                 RoundedRectangle(cornerRadius: 1)
-                    .fill(coreBarColor(u))
+                    .fill(coreColor(u))
                     .frame(height: max(2, 14 * min(u, 100) / 100))
                     .frame(maxWidth: .infinity)
                     .animation(.spring(response: 0.4, dampingFraction: 0.8), value: u)
@@ -118,16 +111,16 @@ struct MenuBarView: View {
                 ? Double(monitorService.stats.memoryUsed) / Double(monitorService.stats.memoryTotal) * 100 : 0
             sectionHeader("内存", icon: "memorychip", color: pressureColor,
                           value: pct)
-            gaugeBar(value: pct, color: pressureColor)
+            gaugeBar(pct, color: pressureColor, height: 4)
             HStack(spacing: 0) {
                 Circle().fill(pressureColor).frame(width: 6, height: 6)
                 Text(" \(monitorService.stats.memoryPressure.label)")
                     .font(.caption2).foregroundStyle(pressureColor)
                 Spacer()
-                Text(formatBytes(monitorService.stats.memoryUsed))
+                Text(formatMemoryBytes(monitorService.stats.memoryUsed))
                     .font(.caption2).foregroundStyle(.secondary)
                 Text(" / ").font(.caption2).foregroundStyle(.quaternary)
-                Text(formatBytes(monitorService.stats.memoryTotal))
+                Text(formatMemoryBytes(monitorService.stats.memoryTotal))
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
@@ -155,7 +148,7 @@ struct MenuBarView: View {
     private func netItem(_ label: String, bytes: UInt64, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).font(.caption2).foregroundStyle(.secondary)
-            Text(formatBytesPerSec(bytes))
+            Text(formatNetworkRate(bytes))
                 .font(.caption.weight(.medium).monospaced())
                 .foregroundStyle(color)
                 .contentTransition(.numericText(value: Double(bytes)))
@@ -169,7 +162,7 @@ struct MenuBarView: View {
             if let g = monitorService.stats.gpuUsage {
                 VStack(alignment: .leading, spacing: 5) {
                     sectionHeader("GPU", icon: "display", color: .pink, value: g)
-                    gaugeBar(value: g, color: .pink)
+                    gaugeBar(g, color: .pink, height: 4)
                 }
             }
         }
@@ -204,45 +197,10 @@ struct MenuBarView: View {
         }
     }
 
-    private func gaugeBar(value: Double, color: Color) -> some View {
-        GeometryReader { g in
-            ZStack(alignment: .leading) {
-                Capsule().fill(.quaternary).frame(height: 4)
-                Capsule()
-                    .fill(coreBarColor(value))
-                    .frame(width: max(4, g.size.width * min(value, 100) / 100), height: 4)
-                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: value)
-            }
-        }
-        .frame(height: 4)
-    }
-
-    private func coreBarColor(_ usage: Double) -> Color {
-        usage > 80 ? .red : usage > 60 ? .orange : usage > 30 ? .blue : .blue.opacity(0.6)
-    }
-
     // MARK: - 格式化
 
     private func formatInterval(_ interval: TimeInterval) -> String {
         interval >= 1.0 ? "\(Int(interval))秒" : String(format: "%.1f秒", interval)
-    }
-
-    private func formatBytes(_ bytes: UInt64) -> String {
-        String(format: "%.1f GB", Double(bytes) / (1024*1024*1024))
-    }
-
-    private func formatBytesPerSec(_ bytes: UInt64) -> String {
-        let unit = AppSettings.shared.networkUnit
-        if unit == .bitsPerSec {
-            let bps = Double(bytes) * 8
-            if bps >= 1_000_000_000 { return String(format: "%.1f Gbps", bps / 1_000_000_000) }
-            if bps >= 1_000_000 { return String(format: "%.1f Mbps", bps / 1_000_000) }
-            if bps >= 1_000 { return String(format: "%.0f Kbps", bps / 1_000) }
-            return "\(Int(bps)) bps"
-        }
-        if bytes >= 1_000_000 { return String(format: "%.1f MB/s", Double(bytes)/1_000_000) }
-        if bytes >= 1_000     { return String(format: "%.0f KB/s", Double(bytes)/1_000) }
-        return "\(bytes) B/s"
     }
 
     // MARK: - 动作
@@ -250,7 +208,7 @@ struct MenuBarView: View {
     private func openMainWindow() {
         NSApp.setActivationPolicy(.regular)
         openWindow(id: "main")
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 
 }

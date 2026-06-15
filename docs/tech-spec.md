@@ -17,7 +17,7 @@
 | `Host.framework` | CPU/内存统计 | `host_processor_info()`, `host_statistics64()` |
 | `IOKit` | 温度/GPU 数据 | `IOServiceGetMatchingServices`, SMC 通信 |
 | `Network.framework` | 网络监控 | `NWPathMonitor` + `sysctl` 获取接口字节数 |
-| `SwiftUI` | UI 层 | `@ObservableObject`, `.glassBackgroundEffect()` |
+| `SwiftUI` | UI 层 | `@ObservableObject`, Swift Charts |
 | `AppKit` | 菜单栏集成 | `NSStatusBar`, `NSPopover`, `NSHostingView` |
 | `Swift Charts` | 历史图表 | `Chart`, `LineMark` |
 | `ServiceManagement` | 开机启动 | `SMAppService` |
@@ -65,8 +65,6 @@ struct SystemStats {
     var memoryTotal: UInt64           // 物理内存总量
     var memoryUsed: UInt64            // 已用内存
     var memoryPressure: MemoryPressure // 内存压力级别
-    var cpuTemperature: Double?       // CPU 温度 °C
-    var gpuTemperature: Double?       // GPU 温度 °C
     var gpuUsage: Double?             // GPU 使用率 0-100
     var networkDownload: UInt64       // 下载速率 bytes/s
     var networkUpload: UInt64         // 上传速率 bytes/s
@@ -90,11 +88,9 @@ macOS 使用内存压力而非简单的"已用/总量"：
 - `VM_PAGE_FREE()` / `VM_PAGE_ACTIVE()` 等宏计算
 - 通过 `host_statistics64()` 和 `vm_statistics64` 获取
 
-### SMC 温度读取
-- 通过 IOKit 打开 `AppleSMC` 服务
-- 使用 `IOConnectCallStructMethod` 发送 SMC 命令
-- 常用 Key: `TC0P`(CPU Proximity), `TG0P`(GPU Proximity)
-- 需要 root 权限或无 SIP 限制时可完全访问
+### 温度监控（已移除）
+- v1.0.0 中尝试通过 SMC / IORegistry / PMU 读取温度，Apple Silicon（M 系列）因安全限制无法访问
+- v1.1.0 温度相关代码已完全移除，后续可通过 `sudo powermetrics` 方案获取
 
 ### 网络速率
 - 首次获取各接口字节数作为基准
@@ -106,8 +102,20 @@ macOS 使用内存压力而非简单的"已用/总量"：
 - 读取 `PerformanceStatistics` 属性字典
 - 计算 `(activeTime / totalTime) * 100`
 
+## 版本历史
+
+### v1.1.0
+- 移除自定义液态玻璃效果，采用 macOS 原生外观
+- 重构：提取共享 UI 组件到 `Utils/ViewHelpers.swift`
+- 修复：UserDefaults key 命名空间化，防止日积月累的泄漏
+- 修复：`@MainActor` 迁移提升 Swift 6 并发安全性
+- 修复：内存计算溢出保护
+
+### v1.0.0
+- 初始发布，全部 10 个实施步骤完成
+
 ## 性能要求
 - 监控服务刷新间隔默认 1s，最低 0.5s
-- 监控服务自身 CPU 占用 < 2%
+- 监控服务自身 CPU 占用 < 2%（Release 构建）
 - 内存占用 < 50MB
 - 数据采集异步执行，不阻塞主线程

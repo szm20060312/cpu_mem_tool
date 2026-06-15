@@ -1,12 +1,8 @@
 # 设计规范
 
-## 设计语言：macOS 26 "液态玻璃" (Liquid Glass)
+## 设计语言：macOS 原生外观
 
-macOS 26 引入了全新的"液态玻璃"设计语言，核心特征是：
-- **半透明层次**：背景使用毛玻璃模糊 + 半透明叠加
-- **深度感**：通过 Z 轴阴影和模糊创造空间层次
-- **流动感**：交互和转场使用弹性动画
-- **光感**：背景光斑随窗口移动而改变
+v1.1.0 起，FloatMonitor 采用 macOS 原生窗口外观，不再手动模拟玻璃效果。窗口和面板使用系统默认材质，自动适配浅色/深色模式。
 
 ## 色彩系统
 
@@ -15,7 +11,7 @@ macOS 26 引入了全新的"液态玻璃"设计语言，核心特征是：
 
 | 用途 | 浅色模式 | 深色模式 |
 |------|----------|----------|
-| 面板背景 | `.ultraThinMaterial` + glass effect | `.ultraThinMaterial` + glass effect |
+| 面板背景 | 系统默认 | 系统默认 |
 | 文字主色 | `.primary` | `.primary` |
 | 文字次色 | `.secondary` | `.secondary` |
 | CPU 色 | `blue` | `blue` |
@@ -85,26 +81,13 @@ macOS 26 引入了全新的"液态玻璃"设计语言，核心特征是：
 | Tab 切换 | `.easeInOut` | 0.25s |
 | 图表更新 | `.animation(.smooth, value: data)` | 默认 |
 
-## 液态玻璃效果应用
+## 窗口样式
 
-```swift
-// 面板背景
-.background(.glassBackgroundEffect())
-
-// 或使用材质
-.background(.regularMaterial)
-.glassBackgroundEffect(in: RoundedRectangle(cornerRadius: 16))
-
-// 窗口背景
-WindowGroup {
-    ContentView()
-}
-.windowBackground(.glassBackgroundEffect())
-.windowStyle(.hiddenTitleBar)
-```
+v1.1.0 起采用 macOS 原生外观，窗口使用 `.hiddenTitleBar` 隐藏标题栏。
+所有视图不再手动设置材质背景，由系统自动处理。
 
 ## 适配要求
 - [x] 浅色模式
 - [x] 深色模式
 - [ ] 高对比度模式
-- [ ] 降低透明度模式（可用 `.ultraThinMaterial` 回退）
+- [ ] 降低透明度模式
