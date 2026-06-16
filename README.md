@@ -35,7 +35,7 @@ Mac 菜单栏系统监控工具，实时显示 CPU / 内存占用，点击弹出
 
 | 项目 | 要求 |
 |------|------|
-| 系统 | macOS 26 (Tahoe) 或更高 |
+| 系统 | 已经支持 macOS 27 beta |
 | 芯片 | Apple Silicon / Intel |
 | 开发 | Xcode 26.5+ / Swift 6.0+ |
 
@@ -122,22 +122,28 @@ FloatMonitor/
 - **菜单栏空间** — macOS 会在菜单栏空间不足时自动隐藏部分图标，FloatMonitor 紧凑模式已尽力减小宽度
 - **Intel GPU** — GPU 使用率通过 `IOAccelerator` 读取，仅 Apple Silicon 可用
 
-## 📝 开发状态
+## 📝 更新日志
 
-v1.1.0 — 全部 10 个实施步骤已完成 ✅
+### v1.1.0 (2026-06-15)
 
-| 步骤 | 内容 | 状态 |
-|------|------|:--:|
-| 1 | 项目骨架 | ✅ |
-| 2 | 系统监控数据采集（CPU/内存/网络/GPU） | ✅ |
-| 3 | 菜单栏基础显示 | ✅ |
-| 4 | 弹出面板 (Popover) | ✅ |
-| 5 | 桌面窗口模式 | ✅ |
-| 6 | UI 美化（v1.1.0 迁移至原生外观） | ✅ |
-| 7 | 应用图标与品牌 | ✅ |
-| 8 | 偏好设置 | ✅ |
-| 9 | 历史图表 | ✅ |
-| 10 | 打包与发布 (DMG) | ✅ |
+**UI**
+- 移除手动模拟的液态玻璃效果，窗口/面板回归 macOS 原生外观（macOS 27 已支持任务栏默认液态玻璃效果）
+
+**并发安全**
+- `SystemMonitorService` / `NetworkHistoryManager` / `AppSettings` 迁移至 `@MainActor`，提升 Swift 6 并发安全性
+
+**Bug 修复**
+- 内存计算 `&-` 下溢保护，防止异常状态下显示天文数字
+- 每日网络统计 UserDefaults key 30 天自动清理，防止永久累积
+- UserDefaults key 添加 `com.floatmonitor.` 命名空间前缀
+- `openMainWindow()` 不再强制 `ignoringOtherApps`，不打断当前工作
+- `todayKey()` 日期格式化锁定 `en_US_POSIX` locale
+- 删除 `stopMonitoring()` / `formatRate()` 死代码
+- 移除 `@MainActor` 类中冗余的 `.receive(on: DispatchQueue.main)`
+
+**重构**
+- 新建 `Utils/ViewHelpers.swift`，提取 `gaugeBar` / `coreColor` / 格式化函数，消除 MenuBarView 和 ContentView 间 4 处代码重复
+
 
 ## 📄 许可证
 
