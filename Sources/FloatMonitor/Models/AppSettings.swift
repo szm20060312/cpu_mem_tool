@@ -1,4 +1,5 @@
 import Foundation
+import os
 import ServiceManagement
 
 // MARK: - 菜单栏显示模式
@@ -54,7 +55,7 @@ final class AppSettings: ObservableObject {
                     try SMAppService.mainApp.unregister()
                 }
             } catch {
-                print("[AppSettings] 开机启动设置失败: \(error)")
+                Logger.app.error("开机启动设置失败: \(error)")
                 launchAtLogin = oldValue
             }
         }

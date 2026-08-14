@@ -1,5 +1,6 @@
 import Foundation
 import IOKit
+import os
 
 /// GPU 监控器
 /// 通过 IOKit 匹配 IOAccelerator 服务获取 GPU 使用率
@@ -74,7 +75,7 @@ enum GPUMonitor {
         #if DEBUG
         let statKeys = perfStats.keys.sorted()
         if !statKeys.isEmpty {
-            print("[GPUMonitor] Available PerformanceStatistics keys: \(statKeys)")
+            Logger.app.debug("Available PerformanceStatistics keys: \(statKeys)")
         }
         #endif
 

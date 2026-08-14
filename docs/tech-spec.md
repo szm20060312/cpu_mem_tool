@@ -88,9 +88,12 @@ macOS 使用内存压力而非简单的"已用/总量"：
 - `VM_PAGE_FREE()` / `VM_PAGE_ACTIVE()` 等宏计算
 - 通过 `host_statistics64()` 和 `vm_statistics64` 获取
 
-### 温度监控（已移除）
-- v1.0.0 中尝试通过 SMC / IORegistry / PMU 读取温度，Apple Silicon（M 系列）因安全限制无法访问
-- v1.1.0 温度相关代码已完全移除，后续可通过 `sudo powermetrics` 方案获取
+### 温度监控（v1.2.0 起）
+- 通过 `IOServiceOpen` + `IOConnectCallStructMethod` 直接与 AppleSMC 通信（`SMCMonitor.swift`）
+- 读取 10 个 CPU 温度传感器 key：`Tp09/Tp0T/Tp01/Tp05/Tp0D/Tp0H/Tp0L/Tp0P/Tp0X/Tp0b`，取平均值
+- 支持 `sp78` / `sp87` / `sp96` / `ui16` / `flt` 5 种数据格式解析
+- 内置合理性过滤（10–120°C），防止未接入传感器返回的假数据污染平均值
+- 温度不可用时 UI 自动隐藏
 
 ### 网络速率
 - 首次获取各接口字节数作为基准
@@ -103,6 +106,12 @@ macOS 使用内存压力而非简单的"已用/总量"：
 - 计算 `(activeTime / totalTime) * 100`
 
 ## 版本历史
+
+### v1.2.0
+- 新增 SMC 温度采集（AppleSMC 直连，10 key 平均 + 合理性过滤）
+- 菜单栏宽度锁定：预计算占位符宽度，数值变化不跳动
+- 弹出面板模块卡片化 + 展开/收起详情 + 弹窗自动尺寸
+- OSLog 结构化日志替代 `print()`
 
 ### v1.1.0
 - 移除自定义液态玻璃效果，采用 macOS 原生外观

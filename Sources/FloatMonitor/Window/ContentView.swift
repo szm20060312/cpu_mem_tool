@@ -98,11 +98,20 @@ private struct OverviewTab: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                metricCard("CPU", icon: "cpu", color: .blue, value: s.stats.cpuUsage) {
+                metricCard(kind: .cpu, "CPU", icon: "cpu", color: .blue, value: s.stats.cpuUsage) {
                     gaugeBar(s.stats.cpuUsage, color: .blue)
                     miniCores(s.stats.cpuPerCore)
+                    if let t = s.stats.cpuTemperature {
+                        HStack(spacing: 4) {
+                            Image(systemName: "thermometer.medium")
+                                .font(.caption).foregroundStyle(tempColor(t))
+                            Text(String(format: "%.0f°C", t))
+                                .font(.callout.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(tempColor(t))
+                        }
+                    }
                 }
-                metricCard("内存", icon: "memorychip", color: memColor, value: memPct) {
+                metricCard(kind: .memory, "内存", icon: "memorychip", color: memColor, value: memPct) {
                     gaugeBar(memPct, color: memColor)
                     HStack {
                         Circle().fill(memColor).frame(width: 5, height: 5)
@@ -114,11 +123,11 @@ private struct OverviewTab: View {
                     }
                 }
                 if let g = s.stats.gpuUsage {
-                    metricCard("GPU", icon: "display", color: .pink, value: g) {
+                    metricCard(kind: .gpu, "GPU", icon: "display", color: .pink, value: g) {
                         gaugeBar(g, color: .pink)
                     }
                 }
-                metricCard("网络", icon: "network", color: .purple, value: nil) {
+                metricCard(kind: .network, "网络", icon: "network", color: .purple, value: nil) {
                     HStack {
                         VStack(alignment: .leading) {
                             Text("↓ 下载").font(.caption2).foregroundStyle(.secondary)
@@ -166,14 +175,14 @@ private struct OverviewTab: View {
         .frame(height: 18)
     }
 
-    private func metricCard<V: View>(_ title: String, icon: String, color: Color, value: Double?, @ViewBuilder sub: () -> V) -> some View {
+    private func metricCard<V: View>(kind: ModuleKind, _ title: String, icon: String, color: Color, value: Double?, @ViewBuilder sub: () -> V) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 Image(systemName: icon).font(.caption.weight(.semibold)).foregroundStyle(color)
                 Text(title).font(.caption).foregroundStyle(.primary)
                 Spacer()
                 if let v = value {
-                    Text(String(format: "%.0f%%", v))
+                    Text(formatPercent(v))
                         .font(.title3.weight(.bold).monospacedDigit())
                         .foregroundStyle(v > 80 ? .red : v > 60 ? .orange : .primary)
                         .contentTransition(.numericText(value: v))
@@ -183,6 +192,14 @@ private struct OverviewTab: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(moduleCardTint(for: kind))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(moduleCardBorder(for: kind), lineWidth: 0.5)
+        )
     }
 }
 

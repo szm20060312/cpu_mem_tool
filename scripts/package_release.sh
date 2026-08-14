@@ -8,7 +8,7 @@ set -e
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 APP_NAME="FloatMonitor"
-VERSION="1.1.0"
+VERSION="1.2.0"
 BUILD_DIR="$PROJECT_DIR/.build"
 RELEASE_BIN="$BUILD_DIR/release/$APP_NAME"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"

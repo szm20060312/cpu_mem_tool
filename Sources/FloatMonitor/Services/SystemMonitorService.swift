@@ -22,6 +22,7 @@ final class SystemMonitorService: ObservableObject {
     }
 
     private var timer: Timer?
+    private let smcMonitor: SMCMonitor? = SMCMonitor()
 
     // 用于计算差值的上一轮数据
     private var previousCPUTicks: [processor_cpu_load_info]?
@@ -77,6 +78,7 @@ final class SystemMonitorService: ObservableObject {
         let memory = fetchMemory()
         let network = fetchNetwork()
         let gpuUsage = GPUMonitor.getUsage()
+        let cpuTemp = smcMonitor?.cpuTemperature()
 
         stats = SystemStats(
             cpuUsage: cpu.overall,
@@ -85,6 +87,7 @@ final class SystemMonitorService: ObservableObject {
             memoryUsed: memory.used,
             memoryPressure: memory.pressure,
             gpuUsage: gpuUsage,
+            cpuTemperature: cpuTemp,
             networkDownload: network.download,
             networkUpload: network.upload
         )

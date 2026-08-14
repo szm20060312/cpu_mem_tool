@@ -14,6 +14,9 @@ struct SystemStats {
     // GPU
     var gpuUsage: Double? = nil             // 0-100
 
+    // 温度 (°C)
+    var cpuTemperature: Double? = nil
+
     // 网络 (bytes/s)
     var networkDownload: UInt64 = 0
     var networkUpload: UInt64 = 0

@@ -20,6 +20,12 @@ DerivedData/
 .vscode/
 .idea/
 
+# Claude / Agent files
+.claude/
+AGENTS.md
+.memory/
+*.claude.md
+
 # Logs
 *.log
 dev_logs/

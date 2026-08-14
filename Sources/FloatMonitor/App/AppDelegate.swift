@@ -5,18 +5,29 @@ import Combine
 // MARK: - 双行菜单栏文本视图
 
 /// 自定义 NSView，在菜单栏中以双行紧凑布局显示 CPU/内存数据
-/// 宽度仅 ~36pt，避免因文字过长被系统隐藏
+/// 使用固定宽度占位符，防止数值变化时图标位置跳动
 @MainActor
 final class StatusBarTextView: NSView {
-    var cpuText: String = "--" {
+    var cpuText: String = "C ---" {
         didSet { needsDisplay = true }
     }
-    var memText: String = "--" {
+    var memText: String = "M ---" {
         didSet { needsDisplay = true }
     }
 
+    /// 预计算最大可能字符串宽度（"C 100%"），确保固定占位符
+    fileprivate static let maxWidth: CGFloat = {
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 7.5, weight: .medium),
+            .kern: -0.2 as NSNumber,
+        ]
+        let cpuMax = ("C 100%" as NSString).size(withAttributes: attrs).width
+        let memMax = ("M 100%" as NSString).size(withAttributes: attrs).width
+        return max(cpuMax, memMax) + 2  // 左右各 1pt 边距
+    }()
+
     override var intrinsicContentSize: NSSize {
-        NSSize(width: 37, height: 22)
+        NSSize(width: Self.maxWidth, height: 22)
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -31,11 +42,8 @@ final class StatusBarTextView: NSView {
             .kern: -0.2 as NSNumber,
         ]
 
-        let cpuLine = "C \(cpuText)" as NSString
-        let memLine = "M \(memText)" as NSString
-
-        cpuLine.draw(at: NSPoint(x: 1, y: bounds.height - 9.5), withAttributes: lineAttrs)
-        memLine.draw(at: NSPoint(x: 1, y: 1.5), withAttributes: lineAttrs)
+        (cpuText as NSString).draw(at: NSPoint(x: 1, y: bounds.height - 9.5), withAttributes: lineAttrs)
+        (memText as NSString).draw(at: NSPoint(x: 1, y: 1.5), withAttributes: lineAttrs)
     }
 }
 
@@ -62,7 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - 状态栏
 
     private func setupStatusBar() {
-        statusItem = NSStatusBar.system.statusItem(withLength: 37)
+        statusItem = NSStatusBar.system.statusItem(withLength: StatusBarTextView.maxWidth)
         statusItem.isVisible = true
 
         if let button = statusItem.button {
@@ -82,12 +90,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setupPopover() {
         popover = NSPopover()
-        popover.contentSize = NSSize(width: 260, height: 310)
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(
+        let hostingController = NSHostingController(
             rootView: MenuBarView()
                 .environmentObject(SystemMonitorService.shared)
         )
+        hostingController.sizingOptions = .preferredContentSize
+        popover.contentViewController = hostingController
     }
 
     @objc private func togglePopover() {
@@ -128,14 +137,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         switch AppSettings.shared.menuBarMode {
         case .compact:
-            statusView.cpuText = String(format: "%02d%%", cpuInt)
-            statusView.memText = String(format: "%02d%%", memInt)
+            statusView.cpuText = String(format: "C %3d%%", cpuInt)
+            statusView.memText = String(format: "M %3d%%", memInt)
 
         case .textOnly:
-            statusItem.button?.title = String(format: "CPU %02d%% MEM %02d%%", cpuInt, memInt)
+            statusItem.button?.title = String(format: "CPU %3d%% MEM %3d%%", cpuInt, memInt)
 
         case .iconText:
-            statusItem.button?.title = String(format: "C %02d%% M %02d%%", cpuInt, memInt)
+            statusItem.button?.title = String(format: "C %3d%% M %3d%%", cpuInt, memInt)
         }
     }
 
@@ -154,7 +163,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.isVisible = true
         switch mode {
         case .compact:
-            statusItem.length = 37
+            statusItem.length = StatusBarTextView.maxWidth
             statusItem.button?.title = ""
             statusView.isHidden = false
 

@@ -1,24 +1,24 @@
 # FloatMonitor
 
-Mac 菜单栏系统监控工具，实时显示 CPU / 内存占用，点击弹出详细面板查看 GPU、网络等完整数据。macOS 原生设计风格。
+Mac 菜单栏系统监控工具，实时显示 CPU / 内存占用，点击弹出详细面板查看温度、GPU、网络等完整数据。macOS 原生设计风格。
 
 ## ✨ 功能
 
 ### 菜单栏实时监控
-- **双行紧凑显示** — `C 23%` / `M 58%` 只占 37pt 宽度，不挤占菜单栏空间
+- **双行紧凑显示** — `C 23%` / `M 58%` 只占 ~37pt 宽度，不挤占菜单栏空间
 - **三种显示模式** — 紧凑双行 / 纯文字 / 图标+文字，可在设置中切换
-- **等宽数字字体** — 数值变化时宽度不跳动
+- **固定宽度占位符** — 预计算 `C 100%` 宽度，`5%` 和 `100%` 显示等宽，数值变化不跳动
 - **深色/浅色自适应** — 自动跟随系统外观
 
 ### 弹出面板 (Popover)
-- **CPU** — 总使用率 + 每核心竖状图，颜色随负载变化（蓝→橙→红）
-- **内存** — 使用率进度条 + 内存压力指示灯（绿/橙/红）+ 已用/总量
-- **网络** — 下载/上传实时速率，支持 MB/s 和 Mbps 两种单位
+- **CPU** — 总使用率 + 每核心竖状图 + 温度，颜色随负载变化（蓝→橙→红），点击展开/收起详情
+- **内存** — 使用率进度条 + 内存压力指示灯（绿/橙/红）+ 已用/总量，点击展开/收起详情
+- **网络** — 下载/上传实时速率，支持 MB/s 和 Mbps 两种单位，点击展开/收起详情
 - **GPU** — Apple Silicon GPU 实时使用率
 - **底部控制栏** — 刷新间隔一键切换（0.5s / 1s / 2s / 5s）+ 退出按钮
 
 ### 桌面窗口模式
-- **概览** — 指标卡片网格（CPU / 内存 / GPU / 网络），含进度条和辅助信息
+- **概览** — 指标卡片网格（CPU / 内存 / GPU / 网络），CPU 卡片含温度，模块独立色板
 - **CPU** — 总使用率大数字 + 每核心负载条带标签
 - **内存** — 使用率仪表 + 已用/总量对比 + 压力状态
 - **网络** — Swift Charts 折线图（下载/上传 LineMark + AreaMark）+ 今日累计流量
@@ -35,7 +35,7 @@ Mac 菜单栏系统监控工具，实时显示 CPU / 内存占用，点击弹出
 
 | 项目 | 要求 |
 |------|------|
-| 系统 | 已经支持 macOS 27 beta |
+| 系统 | macOS 26 (Tahoe)+，已在 macOS 27 beta 验证 |
 | 芯片 | Apple Silicon / Intel |
 | 开发 | Xcode 26.5+ / Swift 6.0+ |
 
@@ -74,6 +74,7 @@ open Package.swift   # Xcode → Cmd+R 运行
 | 内存 | `host_statistics64` + `sysctl(HW_MEMSIZE)` |
 | 网络 | `getifaddrs` 遍历接口 + 差值法计算速率 |
 | GPU | IOKit `IOAccelerator` → `PerformanceStatistics` |
+| 温度 | AppleSMC 直连（`IOConnectCallStructMethod`，10 key 平均 + 合理性过滤） |
 | 图表 | Swift Charts (`LineMark` + `AreaMark`) |
 | 持久化 | `UserDefaults` / `@AppStorage` |
 | 构建 | Swift Package Manager |
@@ -95,13 +96,15 @@ FloatMonitor/
 │   │   └── SettingsView.swift             # 设置页面
 │   ├── Services/
 │   │   ├── SystemMonitorService.swift     # 核心监控服务（Timer + @Published）
-│   │   └── GPUMonitor.swift               # GPU 使用率（IOKit IOAccelerator）
+│   │   ├── GPUMonitor.swift               # GPU 使用率（IOKit IOAccelerator）
+│   │   └── SMCMonitor.swift               # CPU 温度（AppleSMC 直连）
 │   ├── Models/
 │   │   ├── SystemStats.swift              # 系统数据模型
 │   │   ├── AppSettings.swift              # 应用设置（UserDefaults + SMAppService）
 │   │   └── NetworkHistory.swift           # 网络历史数据管理
 │   └── Utils/
-│       └── ViewHelpers.swift              # 共享 UI 组件和格式化函数
+│       ├── ViewHelpers.swift              # 共享 UI 组件和格式化函数
+│       └── Loggers.swift                  # OSLog 结构化日志
 ├── Resources/
 │   ├── Info.plist                         # App 包配置（LSUIElement=true）
 │   └── AppIcon.icns                       # 应用图标
@@ -114,15 +117,37 @@ FloatMonitor/
     ├── tech-spec.md
     ├── design-spec.md
     └── implementation-steps.md
+    ├── hagimi-monitor-analysis.md         # 竞品源码研究报告
+    ├── improvement-plan.md                # 长期改进计划
+    └── performance-report.md              # 资源占用检测报告
 ```
 
 ## ⚠️ 已知限制
 
-- **温度传感器** — Apple Silicon 上标准 IOKit 路径无法获取 CPU/GPU 温度（macOS 安全限制），后续可通过 `powermetrics` 方案获取（需 sudo 授权）
+- **温度传感器** — 通过 AppleSMC 读取 CPU 温度（10 个传感器 key 取平均），内置 10–120°C 合理性过滤；部分机型 key 不可用或读数异常时自动隐藏
 - **菜单栏空间** — macOS 会在菜单栏空间不足时自动隐藏部分图标，FloatMonitor 紧凑模式已尽力减小宽度
 - **Intel GPU** — GPU 使用率通过 `IOAccelerator` 读取，仅 Apple Silicon 可用
 
 ## 📝 更新日志
+
+### v1.2.0 (2026-08-14)
+
+**温度**
+- 新增 CPU 温度采集：AppleSMC 直连（`IOServiceOpen` + `IOConnectCallStructMethod`），10 个传感器 key 取平均
+- 内置合理性过滤（10–120°C），排除未接入传感器返回的假数据；不可用时自动隐藏
+
+**菜单栏**
+- 宽度锁定：预计算最大占位符宽度，`C   5%` 与 `C 100%` 等宽，数值变化不再跳动
+
+**UI**
+- 弹出面板模块卡片化，CPU/内存/网络/GPU 独立色板（基于 HagimiMonitor balanced 色板）
+- CPU/内存/网络卡片点击展开/收起详情（每核心负载、温度、压力、速率明细）
+- 弹窗高度随内容自动适应，不再固定 310pt
+- 标题栏/底部按钮改为原生玻璃胶囊样式，面板整体背景 + 描边
+
+**质量**
+- OSLog 结构化日志替代 `print()`
+- 百分比/内存/网络速率格式化统一固定宽度，视觉对齐
 
 ### v1.1.0 (2026-06-15)
 
